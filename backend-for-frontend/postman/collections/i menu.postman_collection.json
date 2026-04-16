@@ -1,0 +1,406 @@
+{
+  "info": {
+    "_postman_id": "2065717f-30ee-4843-962e-1852bf8d4cf1",
+    "name": "i menu",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "login",
+      "id": "77be4f16-75ca-4ea8-8058-7b611ba4b034",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "8|TQkjsS2M8LAPJLwXD6trD2Sxz0c6tyhrmZbDAesjb68a0eb0",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"email\": \"admin@imenu.com\",\r\n  \"password\": \"password\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/login",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "login",
+      "id": "19138860-313a-4bae-930c-ee3f94924ac4",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"email\": \"cashier@imenu.com\",\r\n  \"password\": \"password123\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/users",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "api stock items",
+      "id": "55830a3a-b00b-43e5-b113-a3b91c81bb79",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "14|6DmlgbJnOsheb5a2CoDgplZKLArrANYvfkcfcgmq10a00164",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "",
+            "type": "text",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/stock-items",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "stock-items"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/stocks",
+      "id": "527b6ca5-4374-4db4-8284-1d80a68ad304",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "12|8yWBwyDF6DtGEQEY2lJQskkJwb97QV2LEqCTi0rN52e74467",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"item_id\": 1,\r\n  \"stock\": 8000,\r\n  \"stock_warning_count\": 200,\r\n  \"stock_duration_forecast_day\": 10\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/stocks\n",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "stocks\n"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "api/menu",
+      "id": "07c39dc0-9ad0-4e53-838e-1f15bd514113",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "63|7JQXIhDpLqRqbjRuvc40sxlHHdyji5RPJfvDnaXu37dee136",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text",
+            "uuid": "8b36ea1e-5863-4da9-96f6-b0300f38260e"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text",
+            "uuid": "c917e60f-7db3-4d89-887e-cdfbc5627890"
+          },
+          {
+            "key": "Authorization",
+            "value": "",
+            "type": "text",
+            "uuid": "6ace84e7-3aa9-474c-8f62-dc825dd907bd",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Ugali\",\r\n  \"sale_price\": 700,\r\n  \"currency\": \"KES\"\r\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/menus",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "menus"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/orders",
+      "id": "99b75ac3-d9e2-44f7-9ce6-dbdcfaab8eb5",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "11|HL0TXCQE2WJbF7ioNQXZgHbLg7ze6t5YoLqZt9Co2f8fa0ff",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/orders/26/pay",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "orders",
+            "26",
+            "pay"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "api/menu-ingredients",
+      "id": "dbc55b9d-7f23-4d87-8e2d-642410aeaebd",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "8|TQkjsS2M8LAPJLwXD6trD2Sxz0c6tyhrmZbDAesjb68a0eb0",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/menu-ingredients",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "menu-ingredients"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "orderitems",
+      "id": "01ef2ee9-3ada-49ef-8921-0e3b2190cab3",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "8|4RfY6uCYd8RGQ3sZwiCTjCt6RNQQjAtYbbAfDCwn4b32a700",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/order_items",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "order_items"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
