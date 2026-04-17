@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Menu;
 use App\Models\Stock;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -55,6 +56,7 @@ class OrderController extends Controller
             return DB::transaction(function () use ($request) {
 
                 $errors = [];
+                $ingredientErrors = [];
                 $insufficientStockItems = [];
 
                 $stockRequirements = [];
@@ -76,14 +78,20 @@ class OrderController extends Controller
                             continue;
                         }
 
-                        $required =
-                            $ingredient->quantity * $itemData['quantity'];
+                        $required = $ingredient->quantity * $itemData['quantity'];
 
                         if (!isset($stockRequirements[$ingredient->stock_item_id])) {
-                            $stockRequirements[$ingredient->stock_item_id] = 0;
+                            $stockRequirements[$ingredient->stock_item_id] = [
+                                'required' => 0,
+                                'menu_id' => $menu->id,
+                                'menu_name' => $menu->name,
+                                'ingredient_name' => $ingredient->stockItem->name,
+                                'unit' => $ingredient->stockItem->unit ?? 'units',
+                                'requested_quantity' => $itemData['quantity']
+                            ];
                         }
 
-                        $stockRequirements[$ingredient->stock_item_id] += $required;
+                        $stockRequirements[$ingredient->stock_item_id]['required'] += $required;
                     }
                 }
 
@@ -92,25 +100,37 @@ class OrderController extends Controller
                     ->get()
                     ->keyBy('stock_item_id');
 
-                foreach ($stockRequirements as $stockItemId => $required) {
+                foreach ($stockRequirements as $stockItemId => $requirement) {
 
                     $stock = $stocks[$stockItemId] ?? null;
 
                     if (!$stock) {
-                        $errors[] = "Missing stock for item ID {$stockItemId}";
+                        $errors[] = "Missing stock for {$requirement['ingredient_name']}";
                         continue;
                     }
 
-                    if ($stock->quantity < $required) {
+                    if ($stock->quantity < $requirement['required']) {
                         $insufficientStockItems[] = $stockItemId;
+                        
+                        $ingredientErrors[] = [
+                            'menu_id' => $requirement['menu_id'],
+                            'menu_name' => $requirement['menu_name'],
+                            'ingredient_id' => $stockItemId,
+                            'ingredient_name' => $requirement['ingredient_name'],
+                            'required_quantity' => $requirement['required'],
+                            'available_quantity' => $stock->quantity,
+                            'unit' => $requirement['unit'],
+                            'requested_menu_quantity' => $requirement['requested_quantity']
+                        ];
                     }
                 }
 
-                if (!empty($errors) || !empty($insufficientStockItems)) {
+                if (!empty($errors) || !empty($ingredientErrors)) {
                     return response()->json([
-                        'message' => 'Insufficient stock.',
+                        'message' => 'Insufficient stock for ingredients',
                         'errors' => $errors,
-                        'stock_errors' => array_values(array_unique($insufficientStockItems)),
+                        'stock_errors' => $ingredientErrors,
+                        'error_type' => 'ingredient_shortage'
                     ], 422);
                 }
 
@@ -176,17 +196,24 @@ class OrderController extends Controller
                     ];
                 }
 
-                //  Deduct stock ONCE
-                foreach ($stockRequirements as $stockItemId => $required) {
+                // Deduct stock AND record movements using the StockMovement model
+                foreach ($stockRequirements as $stockItemId => $requirement) {
 
                     $stock = $stocks[$stockItemId];
 
-                    if ($stock->quantity < $required) {
+                    if ($stock->quantity < $requirement['required']) {
                         throw new \Exception("Stock changed during processing.");
                     }
 
-                    $stock->quantity -= $required;
-                    $stock->save();
+                    // Use the StockMovement::record() method
+                    StockMovement::record(
+                        $stock,
+                        StockMovement::TYPE_DEDUCTION,
+                        $requirement['required'],
+                        $order->id,
+                        "Order #{$order->order_number} - {$requirement['menu_name']} (x{$requirement['requested_quantity']})",
+                        "order_{$order->id}"
+                    );
                 }
 
                 $order->recalculateTotals();
@@ -199,7 +226,10 @@ class OrderController extends Controller
             });
 
         } catch (Throwable $e) {
-
+            \Log::error('Order creation failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'message' => 'Server Error',
                 'error' => $e->getMessage(),
@@ -252,7 +282,8 @@ class OrderController extends Controller
             ]);
 
         } catch (Throwable $e) {
-
+            \Log::error('Order approval failed: ' . $e->getMessage());
+            
             return response()->json([
                 'error' => $e->getMessage()
             ], 500);
@@ -301,8 +332,15 @@ class OrderController extends Controller
                                 $ingredient->quantity *
                                 $orderItem->quantity;
 
-                            $stock->quantity += $restoreAmount;
-                            $stock->save();
+                            // Use the StockMovement::record() method for restoration
+                            StockMovement::record(
+                                $stock,
+                                StockMovement::TYPE_RESTORATION,
+                                $restoreAmount,
+                                $order->id,
+                                "Order cancelled - #{$order->order_number} - Menu: {$menu->name}",
+                                "cancelled_order_{$order->id}"
+                            );
                         }
                     }
                 }
@@ -317,7 +355,11 @@ class OrderController extends Controller
             });
 
         } catch (Throwable $e) {
-
+            \Log::error('Order cancellation failed: ' . $e->getMessage(), [
+                'order_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'error' => $e->getMessage()
             ], 500);

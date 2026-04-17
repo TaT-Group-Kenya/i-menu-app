@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/app/lib/auth";
+import { login, getUser } from "@/app/lib/auth";
 import { useTheme } from "@/app/context/theme-context";
+import ThemeToggle from "@/app/components/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,12 +15,16 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLogoutWarning, setShowLogoutWarning] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Check if user is already logged in - show warning but DON'T auto-redirect
     const token = localStorage.getItem('token');
-    if (token) {
-      router.push('/dashboard');
+    const user = getUser();
+    
+    if (token && user) {
+      setShowLogoutWarning(true);
     }
   }, [router]);
 
@@ -47,12 +52,26 @@ export default function LoginPage() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setShowLogoutWarning(false);
+    setError("You have been logged out. Please login again.");
+    window.location.reload();
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       theme === 'dark' 
         ? 'bg-linear-to-br from-gray-900 to-gray-800' 
         : 'bg-linear-to-br from-blue-50 to-indigo-100'
-    } flex items-center justify-center p-4`}>
+    } flex items-center justify-center p-4 relative`}>
+      
+      {/* Theme Toggle Button - Top Right Corner */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
       <div className="max-w-md w-full space-y-8">
         {/* Logo/Brand Section */}
         <div className="text-center">
@@ -74,6 +93,30 @@ export default function LoginPage() {
             Restaurant Management System
           </p>
         </div>
+
+        {/* Warning if already logged in */}
+        {showLogoutWarning && (
+          <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/50 p-4">
+            <div className="flex">
+              <div className="shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  You are already logged in. Please logout first to login as a different user.
+                </p>
+                <button
+                  onClick={handleLogout}
+                  className="mt-2 text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                >
+                  Click here to logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Login Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -182,8 +225,11 @@ export default function LoginPage() {
         <div className={`mt-6 text-center text-sm ${
           theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
         }`}>
-          <p>enter your correct email and password:</p>
-          <p className="font-mono text-xs mt-1">to login</p>
+          <p className="font-medium">Demo Credentials:</p>
+          <div className="mt-2 space-y-1 font-mono text-xs">
+            <p>Admin:email / password</p>
+            <p>Cashier: email / password</p>
+          </div>
         </div>
       </div>
     </div>

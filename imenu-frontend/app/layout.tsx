@@ -4,7 +4,8 @@ import './globals.css';
 import { ThemeProvider } from '@/app/context/theme-context';
 import { ModalProvider } from '@/app/context/modal-context';
 import { ToastProvider } from '@/app/context/toast-context';
-import ThemeToggle from '@/app/components/theme-toggle';
+// Remove ThemeToggle import from here
+// import ThemeToggle from '@/app/components/theme-toggle';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,10 +25,10 @@ export default function RootLayout({
         <ThemeProvider>
           <ModalProvider>
             <ToastProvider>
-              {/* Header with theme toggle */}
-              <div className="fixed top-4 right-4 z-50">
+              {/* REMOVED: The floating theme toggle from here */}
+              {/* <div className="fixed top-4 right-4 z-50">
                 <ThemeToggle />
-              </div>
+              </div> */}
               {children}
             </ToastProvider>
           </ModalProvider>
