@@ -13,10 +13,10 @@ COPY . .
 
 RUN composer install
 
-# Create fresh .env file for production
+# Create fresh .env file
 RUN echo "APP_NAME=i-menu" > .env && \
     echo "APP_ENV=production" >> .env && \
-    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_DEBUG=true" >> .env && \
     echo "APP_URL=https://i-menu-app-5.onrender.com" >> .env && \
     echo "" >> .env && \
     echo "DB_CONNECTION=sqlite" >> .env && \
@@ -32,7 +32,12 @@ RUN mkdir -p /app/database && \
     chmod 777 /app/database/database.sqlite
 
 RUN php artisan key:generate
-RUN php artisan migrate --force
+
+# Show migration status before running
+RUN php artisan migrate:status || true
+
+# Run migration with full verbosity
+RUN php artisan migrate --force -v
 
 EXPOSE 10000
 
