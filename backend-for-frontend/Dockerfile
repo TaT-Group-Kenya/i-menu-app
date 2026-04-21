@@ -36,15 +36,18 @@ RUN mkdir -p /app/database && \
     touch /app/database/database.sqlite && \
     chmod 777 /app/database/database.sqlite
 
-RUN php artisan key:generate
+# Generate app key AND save it to .env
+RUN php artisan key:generate --force
 
-# Run migrations (includes Sanctum tables)
-RUN php artisan migrate --force
+# Verify APP_KEY is in .env
+RUN cat .env | grep APP_KEY
 
-# Clear caches
+# Clear and cache config
 RUN php artisan config:clear
-RUN php artisan cache:clear
-RUN php artisan view:clear
+RUN php artisan config:cache
+
+# Run migrations
+RUN php artisan migrate --force
 
 EXPOSE 10000
 
