@@ -16,7 +16,7 @@ RUN composer install
 # Delete ALL problematic migrations from April 17th
 RUN rm -f database/migrations/2026_04_17_*.php
 
-# Create fresh .env file with debug ON
+# Create fresh .env file
 RUN echo "APP_NAME=i-menu" > .env && \
     echo "APP_ENV=production" >> .env && \
     echo "APP_DEBUG=true" >> .env && \
@@ -38,13 +38,10 @@ RUN mkdir -p /app/database && \
 
 RUN php artisan key:generate
 
-# Run migrations
+# Run migrations (includes Sanctum tables)
 RUN php artisan migrate --force
 
-# Install Sanctum and create tables
-RUN php artisan sanctum:install
-
-# Clear all caches
+# Clear caches
 RUN php artisan config:clear
 RUN php artisan cache:clear
 RUN php artisan view:clear
