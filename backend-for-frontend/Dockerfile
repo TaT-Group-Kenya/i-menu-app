@@ -13,8 +13,18 @@ COPY . .
 
 RUN composer install
 
-# Create .env from .env.example
-RUN cp .env.example .env
+# Create fresh .env file for production
+RUN echo "APP_NAME=i-menu" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_URL=https://i-menu-app-5.onrender.com" >> .env && \
+    echo "" >> .env && \
+    echo "DB_CONNECTION=sqlite" >> .env && \
+    echo "DB_DATABASE=/app/database/database.sqlite" >> .env && \
+    echo "" >> .env && \
+    echo "SESSION_DRIVER=file" >> .env && \
+    echo "CACHE_DRIVER=file" >> .env && \
+    echo "QUEUE_CONNECTION=sync" >> .env
 
 # Create SQLite database
 RUN mkdir -p /app/database && \
