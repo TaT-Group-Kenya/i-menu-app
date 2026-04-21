@@ -1,19 +1,15 @@
 FROM php:8.2-cli
 
-# install dependencies
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libzip-dev zip
 
-# install composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
 COPY . .
 
-RUN composer install
-
-RUN php artisan key:generate
+RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 10000
 
