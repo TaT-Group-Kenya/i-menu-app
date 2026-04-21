@@ -16,10 +16,10 @@ RUN composer install
 # Delete ALL problematic migrations from April 17th
 RUN rm -f database/migrations/2026_04_17_*.php
 
-# Create fresh .env file
+# Create fresh .env file with debug ON
 RUN echo "APP_NAME=i-menu" > .env && \
     echo "APP_ENV=production" >> .env && \
-    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_DEBUG=true" >> .env && \
     echo "APP_URL=https://i-menu-app-5.onrender.com" >> .env && \
     echo "" >> .env && \
     echo "DB_CONNECTION=sqlite" >> .env && \
@@ -27,7 +27,9 @@ RUN echo "APP_NAME=i-menu" > .env && \
     echo "" >> .env && \
     echo "SESSION_DRIVER=file" >> .env && \
     echo "CACHE_DRIVER=file" >> .env && \
-    echo "QUEUE_CONNECTION=sync" >> .env
+    echo "QUEUE_CONNECTION=sync" >> .env && \
+    echo "LOG_CHANNEL=single" >> .env && \
+    echo "LOG_LEVEL=debug" >> .env
 
 # Create SQLite database
 RUN mkdir -p /app/database && \
@@ -38,6 +40,14 @@ RUN php artisan key:generate
 
 # Run migrations
 RUN php artisan migrate --force
+
+# Install Sanctum and create tables
+RUN php artisan sanctum:install
+
+# Clear all caches
+RUN php artisan config:clear
+RUN php artisan cache:clear
+RUN php artisan view:clear
 
 EXPOSE 10000
 
