@@ -22,6 +22,13 @@ COPY . .
 RUN composer install
 
 RUN cp .env.example .env 2>/dev/null || echo "APP_ENV=local" > .env
+# Create SQLite database file
+RUN mkdir -p /app/database && \
+    touch /app/database/database.sqlite && \
+    chmod 777 /app/database/database.sqlite
+
+# Run migrations
+RUN php artisan migrate --force
 
 RUN php artisan key:generate
 
