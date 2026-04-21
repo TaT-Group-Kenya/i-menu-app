@@ -13,6 +13,22 @@ interface MenuItem {
   price: string;
 }
 
+interface OrderResponse {
+  id: number;
+  order_number: string;
+  total_amount: number;
+  payment_method: string;
+  created_at: string;
+  items: Array<{
+    id: number;
+    menu_id: number;
+    name: string;
+    quantity: number;
+    price: number;
+    total?: number;
+  }>;
+}
+
 export default function AdminCreateOrderEntryPage() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -25,8 +41,61 @@ export default function AdminCreateOrderEntryPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [menuNameMap, setMenuNameMap] = useState<Map<number, string>>(new Map());
+  const [lastOrder, setLastOrder] = useState<OrderResponse | null>(null);
+  const [showPrintButton, setShowPrintButton] = useState(false);
 
+  const receiptRef = useRef<HTMLDivElement>(null);
   const hasFetched = useRef(false);
+
+  // Manual print function
+  const handlePrint = () => {
+    const printContent = receiptRef.current;
+    if (!printContent) {
+      showToast("No receipt to print", "error");
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Receipt_${lastOrder?.order_number || "order"}</title>
+            <style>
+              body { 
+                font-family: 'Courier New', monospace; 
+                margin: 0; 
+                padding: 20px;
+                background: white;
+              }
+              .receipt { 
+                max-width: 300px; 
+                margin: 0 auto;
+                background: white;
+              }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .no-print { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt">
+              ${printContent.innerHTML}
+            </div>
+            <script>
+              window.onload = () => {
+                window.print();
+                setTimeout(() => window.close(), 500);
+              };
+            <\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -39,7 +108,6 @@ export default function AdminCreateOrderEntryPage() {
       const res = await api.get("/menus");
       setMenus(res.data);
       
-      // Create a map of menu ID to menu name for error handling
       const map = new Map<number, string>();
       res.data.forEach((menu: MenuItem) => {
         map.set(menu.id, menu.name);
@@ -123,6 +191,7 @@ export default function AdminCreateOrderEntryPage() {
     setLoading(true);
     setMessage(null);
     setErrorMessage(null);
+    setShowPrintButton(false);
 
     try {
       const idempotencyKey = `${Date.now()}-${Math.random()}`;
@@ -138,39 +207,109 @@ export default function AdminCreateOrderEntryPage() {
 
       setMessage(res.data.message);
       showToast(res.data.message, "success");
+      
+      // Store the created order for receipt printing with calculated totals
+      if (res.data.order) {
+        const orderWithTotals = {
+          ...res.data.order,
+          items: res.data.order.items.map((item: any) => ({
+            ...item,
+            total: item.total || (item.price * item.quantity)
+          }))
+        };
+        setLastOrder(orderWithTotals);
+        setShowPrintButton(true);
+      }
+      
       setCart([]);
 
-      setTimeout(() => {
-        router.push("/cashier/orders");
-      }, 2000);
+      // Ask if user wants to print immediately
+      const printReceipt = await showModal(
+        "Order Successful!",
+        `Order #${res.data.order?.order_number || "N/A"} created successfully!\n\nWould you like to print the receipt now?`,
+        "info"
+      );
+
+      if (printReceipt) {
+        setTimeout(() => {
+          handlePrint();
+        }, 100);
+      }
+
     } catch (err: any) {
       const res = err.response?.data;
       let errorLines: string[] = [];
 
-      if (res?.stock_errors?.length) {
-        // Convert IDs to menu names using the map
+      // Check for ingredient-level stock errors (new format from updated backend)
+      if (res?.stock_errors?.length && res?.error_type === 'ingredient_shortage') {
+        // Group errors by menu
+        const errorsByMenu: { [key: string]: any[] } = {};
+        res.stock_errors.forEach((err: any) => {
+          if (!errorsByMenu[err.menu_name]) {
+            errorsByMenu[err.menu_name] = [];
+          }
+          errorsByMenu[err.menu_name].push(err);
+        });
+        
+        errorLines.push(`❌ Cannot prepare order - Insufficient ingredients:\n`);
+        
+        Object.keys(errorsByMenu).forEach(menuName => {
+          errorLines.push(`\n📋 ${menuName}:`);
+          errorsByMenu[menuName].forEach(err => {
+            errorLines.push(`   • ${err.ingredient_name}: Need ${err.required_quantity} ${err.unit}, Only ${err.available_quantity} ${err.unit} available`);
+          });
+        });
+        
+        errorLines.push(`\n💡 Please restock ingredients before ordering these items.`);
+      } 
+      // Check for detailed stock errors (array of objects)
+      else if (res?.stock_errors?.length && typeof res.stock_errors[0] === 'object') {
+        // Group by menu name
+        const errorsByMenu: { [key: string]: any[] } = {};
+        res.stock_errors.forEach((err: any) => {
+          const menuName = err.menu_name || 'Unknown Item';
+          if (!errorsByMenu[menuName]) {
+            errorsByMenu[menuName] = [];
+          }
+          errorsByMenu[menuName].push(err);
+        });
+        
+        errorLines.push(`❌ Insufficient stock for ingredients:\n`);
+        
+        Object.keys(errorsByMenu).forEach(menuName => {
+          errorLines.push(`\n📋 ${menuName}:`);
+          errorsByMenu[menuName].forEach(err => {
+            const ingredientName = err.ingredient_name || 'Ingredient';
+            const required = err.required_quantity || err.required;
+            const available = err.available_quantity || err.available;
+            const unit = err.unit || 'units';
+            errorLines.push(`   • ${ingredientName}: Need ${required} ${unit}, Only ${available} ${unit} available`);
+          });
+        });
+      } 
+      // Old format (array of IDs) - backward compatibility
+      else if (res?.stock_errors?.length && Array.isArray(res.stock_errors) && typeof res.stock_errors[0] !== 'object') {
         const stockErrorsWithNames = res.stock_errors.map((errorId: string | number) => {
           const numericId = Number(errorId);
-          // Try to find the menu name from our cart first
           const cartItem = cart.find(item => item.menu_id === numericId);
           if (cartItem) {
             return cartItem.name;
           }
-          // Fallback to the menuNameMap
           return menuNameMap.get(numericId) || `Item ID: ${errorId}`;
         });
         
         const uniqueItems = [...new Set(stockErrorsWithNames)];
         
-        // Format the error message nicely
         if (uniqueItems.length === 1) {
           errorLines.push(`❌ Insufficient stock for: ${uniqueItems[0]}`);
         } else {
           errorLines.push(`❌ Insufficient stock for the following items:\n${uniqueItems.map(name => `   • ${name}`).join("\n")}`);
         }
-      } else if (res?.message) {
+      } 
+      else if (res?.message) {
         errorLines.push(res.message);
-      } else {
+      } 
+      else {
         errorLines.push("Order creation failed");
       }
 
@@ -206,12 +345,27 @@ export default function AdminCreateOrderEntryPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => router.push("/cashier/orders")}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md"
-        >
-          View Orders
-        </button>
+        <div className="flex gap-3">
+          {/* Print Button - Only shows after order is created */}
+          {showPrintButton && lastOrder && (
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print Receipt
+            </button>
+          )}
+          
+          <button
+            onClick={() => router.push("/admin/orders")}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-md"
+          >
+            View Orders
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -457,6 +611,70 @@ export default function AdminCreateOrderEntryPage() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Hidden Receipt Component for Printing */}
+      <div className="hidden">
+        <div ref={receiptRef} className="p-6 bg-white w-96 font-mono">
+          {lastOrder && lastOrder.items ? (
+            <>
+              {/* Header */}
+              <div className="text-center mb-4">
+                <h2 className="font-bold text-xl">🍽️ i-MENU</h2>
+                <p className="text-xs">Restaurant Management System</p>
+                <div className="border-t border-dashed my-2"></div>
+              </div>
+
+              {/* Order Info */}
+              <div className="text-xs mb-3">
+                <p><strong>Receipt #:</strong> {lastOrder.order_number}</p>
+                <p><strong>Date:</strong> {new Date(lastOrder.created_at).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> {new Date(lastOrder.created_at).toLocaleTimeString()}</p>
+              </div>
+
+              <div className="border-t border-dashed my-2"></div>
+
+              {/* Items Header */}
+              <div className="grid grid-cols-4 gap-1 text-xs font-bold">
+                <div className="col-span-2">Item</div>
+                <div className="text-center">Qty</div>
+                <div className="text-right">Total</div>
+              </div>
+
+              <div className="border-t border-dashed my-1"></div>
+
+              {/* Items List */}
+              {lastOrder.items.map((item) => {
+                const itemTotal = item.total || (item.price * item.quantity);
+                return (
+                  <div key={item.id} className="grid grid-cols-4 gap-1 text-xs mb-1">
+                    <div className="col-span-2">{item.name}</div>
+                    <div className="text-center">{item.quantity}</div>
+                    <div className="text-right">KES {itemTotal.toLocaleString()}</div>
+                  </div>
+                );
+              })}
+
+              <div className="border-t border-dashed my-2"></div>
+
+              {/* Total */}
+              <div className="flex justify-between text-sm font-bold">
+                <span>TOTAL</span>
+                <span>KES {(lastOrder.total_amount || 0).toLocaleString()}</span>
+              </div>
+
+              <div className="border-t border-dashed my-2"></div>
+
+              {/* Footer */}
+              <div className="text-center text-xs mt-4">
+                <p>Thank you for dining with us!</p>
+                <p className="text-[10px] mt-1">Valid for exchange within 7 days</p>
+              </div>
+            </>
+          ) : (
+            <div className="text-center p-4">Loading receipt...</div>
+          )}
+        </div>
       </div>
     </div>
   );

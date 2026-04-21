@@ -39,7 +39,6 @@ export default function AdminCreateOrderEntryPage() {
       const res = await api.get("/menus");
       setMenus(res.data);
       
-      // Create a map of menu ID to menu name for error handling
       const map = new Map<number, string>();
       res.data.forEach((menu: MenuItem) => {
         map.set(menu.id, menu.name);
@@ -147,30 +146,76 @@ export default function AdminCreateOrderEntryPage() {
       const res = err.response?.data;
       let errorLines: string[] = [];
 
-      if (res?.stock_errors?.length) {
-        // Convert IDs to menu names using the map
+      // Check for ingredient-level stock errors (new format from updated backend)
+      if (res?.stock_errors?.length && res?.error_type === 'ingredient_shortage') {
+        // Group errors by menu
+        const errorsByMenu: { [key: string]: any[] } = {};
+        res.stock_errors.forEach((err: any) => {
+          if (!errorsByMenu[err.menu_name]) {
+            errorsByMenu[err.menu_name] = [];
+          }
+          errorsByMenu[err.menu_name].push(err);
+        });
+        
+        errorLines.push(`❌ Cannot prepare order - Insufficient ingredients:\n`);
+        
+        Object.keys(errorsByMenu).forEach(menuName => {
+          errorLines.push(`\n📋 ${menuName}:`);
+          errorsByMenu[menuName].forEach(err => {
+            errorLines.push(`   • ${err.ingredient_name}: Need ${err.required_quantity} ${err.unit}, Only ${err.available_quantity} ${err.unit} available`);
+          });
+        });
+        
+        errorLines.push(`\n💡 Please restock ingredients before ordering these items.`);
+      } 
+      // Check for detailed stock errors (array of objects)
+      else if (res?.stock_errors?.length && typeof res.stock_errors[0] === 'object') {
+        // Group by menu name
+        const errorsByMenu: { [key: string]: any[] } = {};
+        res.stock_errors.forEach((err: any) => {
+          const menuName = err.menu_name || 'Unknown Item';
+          if (!errorsByMenu[menuName]) {
+            errorsByMenu[menuName] = [];
+          }
+          errorsByMenu[menuName].push(err);
+        });
+        
+        errorLines.push(`❌ Insufficient stock for ingredients:\n`);
+        
+        Object.keys(errorsByMenu).forEach(menuName => {
+          errorLines.push(`\n📋 ${menuName}:`);
+          errorsByMenu[menuName].forEach(err => {
+            const ingredientName = err.ingredient_name || 'Ingredient';
+            const required = err.required_quantity || err.required;
+            const available = err.available_quantity || err.available;
+            const unit = err.unit || 'units';
+            errorLines.push(`   • ${ingredientName}: Need ${required} ${unit}, Only ${available} ${unit} available`);
+          });
+        });
+      } 
+      // Old format (array of IDs) - backward compatibility
+      else if (res?.stock_errors?.length && Array.isArray(res.stock_errors)) {
         const stockErrorsWithNames = res.stock_errors.map((errorId: string | number) => {
           const numericId = Number(errorId);
-          // Try to find the menu name from our cart first
           const cartItem = cart.find(item => item.menu_id === numericId);
           if (cartItem) {
             return cartItem.name;
           }
-          // Fallback to the menuNameMap
           return menuNameMap.get(numericId) || `Item ID: ${errorId}`;
         });
         
         const uniqueItems = [...new Set(stockErrorsWithNames)];
         
-        // Format the error message nicely
         if (uniqueItems.length === 1) {
           errorLines.push(`❌ Insufficient stock for: ${uniqueItems[0]}`);
         } else {
           errorLines.push(`❌ Insufficient stock for the following items:\n${uniqueItems.map(name => `   • ${name}`).join("\n")}`);
         }
-      } else if (res?.message) {
+      } 
+      else if (res?.message) {
         errorLines.push(res.message);
-      } else {
+      } 
+      else {
         errorLines.push("Order creation failed");
       }
 

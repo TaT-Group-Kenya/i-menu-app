@@ -34,7 +34,6 @@ export default function AdminDashboard() {
   // Stats state
   const [stats, setStats] = useState({
     totalMenus: 0,
-    totalStocks: 0,
     totalOrders: 0,
     paidOrders: 0,
     cancelledOrders: 0,
@@ -79,10 +78,6 @@ export default function AdminDashboard() {
       const menusRes = await api.get("/menus");
       const menus: Menu[] = menusRes.data;
       
-      // Fetch stocks
-      const stocksRes = await api.get("/stocks");
-      const stocks: Stock[] = stocksRes.data;
-      
       // Calculate order stats
       const paidOrders = orders.filter(order => order.status === "PAID");
       const cancelledOrders = orders.filter(order => order.status === "CANCELLED");
@@ -91,12 +86,8 @@ export default function AdminDashboard() {
       // Calculate total revenue (only from paid orders)
       const totalRevenue = paidOrders.reduce((sum, order) => sum + Number(order.total), 0);
       
-      // Calculate total stock quantity
-      const totalStocks = stocks.reduce((sum, stock) => sum + Number(stock.quantity), 0);
-      
       setStats({
         totalMenus: menus.length,
-        totalStocks: totalStocks,
         totalOrders: orders.length,
         paidOrders: paidOrders.length,
         cancelledOrders: cancelledOrders.length,
@@ -134,8 +125,8 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* STATS CARDS - Now with real data */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* STATS CARDS - Uniform 3-card layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Total Menus */}
           <div className={`rounded-xl p-6 ${
             theme === 'dark' ? 'bg-gray-800' : 'bg-white'
@@ -153,27 +144,6 @@ export default function AdminDashboard() {
               </div>
               <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Total Stocks */}
-          <div className={`rounded-xl p-6 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          } shadow-lg transition-all duration-300 hover:scale-105`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`}>Total Stocks (Units)</p>
-                {loading ? (
-                  <div className="h-8 w-16 bg-gray-300 dark:bg-gray-600 rounded animate-pulse mt-1"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-emerald-600">{stats.totalStocks.toLocaleString()}</p>
-                )}
-              </div>
-              <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
           </div>
