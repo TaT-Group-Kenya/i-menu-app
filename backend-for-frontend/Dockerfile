@@ -13,10 +13,14 @@ COPY . .
 
 RUN composer install
 
+# Remove problematic migration files if they exist
+RUN rm -f database/migrations/2026_04_17_094613_enhance_stock_movements_table.php
+RUN rm -f database/migrations/2026_04_17_094732_migrate_stock_movements_data.php
+
 # Create fresh .env file
 RUN echo "APP_NAME=i-menu" > .env && \
     echo "APP_ENV=production" >> .env && \
-    echo "APP_DEBUG=true" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
     echo "APP_URL=https://i-menu-app-5.onrender.com" >> .env && \
     echo "" >> .env && \
     echo "DB_CONNECTION=sqlite" >> .env && \
@@ -33,11 +37,8 @@ RUN mkdir -p /app/database && \
 
 RUN php artisan key:generate
 
-# Show migration status before running
-RUN php artisan migrate:status || true
-
-# Run migration with full verbosity
-RUN php artisan migrate --force -v
+# Run migrations
+RUN php artisan migrate --force
 
 EXPOSE 10000
 
