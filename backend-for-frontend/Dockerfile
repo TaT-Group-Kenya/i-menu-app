@@ -13,9 +13,8 @@ COPY . .
 
 RUN composer install
 
-# Remove problematic migration files if they exist
-RUN rm -f database/migrations/2026_04_17_094613_enhance_stock_movements_table.php
-RUN rm -f database/migrations/2026_04_17_094732_migrate_stock_movements_data.php
+# Delete ALL problematic migrations from April 17th
+RUN rm -f database/migrations/2026_04_17_*.php
 
 # Create fresh .env file
 RUN echo "APP_NAME=i-menu" > .env && \
